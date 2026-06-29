@@ -1,0 +1,9 @@
+data/config.json
+data/ragbee.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+__pycache__/
+*.pyc
+.env
+.venv/

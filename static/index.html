@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RAGbee</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cellipse cx='50' cy='58' rx='26' ry='22' fill='%23F5C518'/%3E%3Crect x='28' y='48' width='44' height='5' fill='%23222'/%3E%3Crect x='28' y='58' width='44' height='5' fill='%23222'/%3E%3Cellipse cx='35' cy='32' rx='16' ry='11' fill='white' opacity='0.75'/%3E%3Cellipse cx='65' cy='32' rx='16' ry='11' fill='white' opacity='0.75'/%3E%3Ccircle cx='44' cy='52' r='3' fill='%23222'/%3E%3Ccircle cx='56' cy='52' r='3' fill='%23222'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <span class="bee-logo">🐝</span>
+        <span class="brand">RAGbee</span>
+        <button id="settings-btn" class="icon-btn" title="Settings">⚙</button>
+      </div>
+
+      <section class="sidebar-section">
+        <div class="section-header">
+          <span>📚 Collections</span>
+          <button id="new-collection" class="mini-btn">+ New</button>
+        </div>
+        <ul id="collections-list" class="item-list"></ul>
+      </section>
+
+      <section class="sidebar-section">
+        <div class="section-header">
+          <span>💬 Threads</span>
+          <button id="new-thread" class="mini-btn">+ New</button>
+        </div>
+        <ul id="threads-list" class="item-list"></ul>
+      </section>
+    </aside>
+
+    <main id="main">
+      <div id="empty-state" class="empty-state">
+        <div class="bee-large">🐝</div>
+        <h1>Welcome to RAGbee</h1>
+        <p>Build collections of knowledge, then chat with them.</p>
+        <ol class="steps">
+          <li>Click <b>+ New</b> under Collections</li>
+          <li>Add files or notes to it</li>
+          <li>Create a thread and start chatting</li>
+        </ol>
+      </div>
+
+      <div id="collection-view" class="view" hidden>
+        <div class="view-header">
+          <h2 id="collection-name"></h2>
+          <button id="delete-collection" class="danger-btn">Delete</button>
+        </div>
+        <div class="collection-actions">
+          <div class="file-upload">
+            <input type="file" id="file-input" multiple accept=".md,.txt" hidden>
+            <label for="file-input" class="upload-label">📁 Upload .md / .txt files</label>
+          </div>
+          <div class="note-add">
+            <textarea id="note-input" placeholder="Write a note..." rows="3"></textarea>
+            <button id="add-note" class="primary-btn">Add note</button>
+          </div>
+        </div>
+        <div class="chunks-header">Chunks</div>
+        <div class="chunks-list" id="chunks-list"></div>
+      </div>
+
+      <div id="thread-view" class="view" hidden>
+        <div class="view-header">
+          <h2 id="thread-title"></h2>
+          <button id="delete-thread" class="danger-btn">Delete</button>
+        </div>
+        <div class="thread-meta">
+          <label>Collection:
+            <select id="thread-collection"><option value="">(none)</option></select>
+          </label>
+        </div>
+        <div class="messages" id="messages"></div>
+        <div class="input-area">
+          <div class="input-row">
+            <textarea id="chat-input" placeholder="Ask a question..." rows="2"></textarea>
+            <button id="send-btn" class="primary-btn">Send</button>
+          </div>
+          <div class="input-controls">
+            <button id="mode-toggle" class="mode-btn mode-chat">💬 Chat</button>
+            <span class="hint" id="mode-hint">Type and send. RAG is on when a collection is attached.</span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="settings-modal" class="modal" hidden>
+    <div class="modal-content modal-wide">
+      <h2>Settings</h2>
+      <p class="modal-sub">Your API keys are stored locally in <code>ragbee/data/config.json</code>. Pick chat and embedding providers independently.</p>
+
+      <div class="settings-slot">
+        <h3>💬 Chat provider</h3>
+        <label>Provider</label>
+        <select id="chat-provider-select"></select>
+        <p class="provider-note" id="chat-provider-note"></p>
+        <label>API Key</label>
+        <input type="password" id="chat-key-input" placeholder="sk-...">
+        <details class="advanced">
+          <summary>Override chat model</summary>
+          <input type="text" id="chat-model-input" placeholder="default">
+        </details>
+      </div>
+
+      <div class="settings-slot">
+        <h3>🔍 Embedding provider <span class="optional">(used for RAG)</span></h3>
+        <label>Provider</label>
+        <select id="emb-provider-select">
+          <option value="">(same as chat)</option>
+        </select>
+        <p class="provider-note" id="emb-provider-note"></p>
+        <label>API Key <span class="optional">(blank = use chat key)</span></label>
+        <input type="password" id="emb-key-input" placeholder="sk-...">
+        <details class="advanced">
+          <summary>Override embedding model</summary>
+          <input type="text" id="emb-model-input" placeholder="default">
+        </details>
+      </div>
+
+      <p class="key-status" id="key-status"></p>
+      <div class="modal-actions">
+        <button id="settings-cancel">Cancel</button>
+        <button id="settings-save" class="primary-btn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="new-collection-modal" class="modal" hidden>
+    <div class="modal-content">
+      <h2>New collection</h2>
+      <p class="modal-sub">A collection is a library of files and notes. You can attach one to a thread later.</p>
+      <label>Name</label>
+      <input type="text" id="new-collection-input" placeholder="e.g. Physics notes" maxlength="80">
+      <p class="form-error" id="new-collection-error" hidden></p>
+      <div class="modal-actions">
+        <button id="new-collection-cancel">Cancel</button>
+        <button id="new-collection-create" class="primary-btn">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="new-thread-modal" class="modal" hidden>
+    <div class="modal-content">
+      <h2>New thread</h2>
+      <p class="modal-sub">A thread is a conversation. Optionally give it a name and pick a collection to ground it in.</p>
+      <label>Name <span class="optional">(optional)</span></label>
+      <input type="text" id="new-thread-input" placeholder="e.g. Biology Q&A" maxlength="80">
+      <label>Collection <span class="optional">(optional)</span></label>
+      <select id="new-thread-collection">
+        <option value="">(none — plain chat)</option>
+      </select>
+      <p class="form-error" id="new-thread-error" hidden></p>
+      <div class="modal-actions">
+        <button id="new-thread-cancel">Cancel</button>
+        <button id="new-thread-create" class="primary-btn">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
