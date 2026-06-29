@@ -49,3 +49,45 @@ Chat and embedding providers are picked independently. Supported:
 - `docs/walkthrough.md` — student guide with 9 exercises
 
 Python 3.10+. An API key for one of the supported providers.
+
+## Ideas to extend it
+
+A few things you can build yourself once you're comfortable with the code.
+Roughly quick → involved.
+
+**Quick wins**
+- Add a provider. `agent.PROVIDERS` is a dict of recipes; adding Ollama,
+  Anthropic, or a local model is ~5 lines and the UI dropdown picks it up.
+- Tweak the chunker. `agent.chunks(text, n, overlap)` controls how files
+  get split. Different sizes give very different retrieval behaviour —
+  try it and see.
+- Customize the system prompt in `agent.build_prompt` to give the agent a
+  personality, or add a "refuse to answer" rule for specific topics.
+- Change the default models. Each provider entry has `default_chat` and
+  `default_embedding` — point them at whatever you actually use.
+
+**Medium**
+- A web search tool. Write `tool_web_search(state, store, cfg)`, register
+  it in `TOOLS`, update `decide()` to pick it when a question needs
+  current information.
+- Re-ranking. After the initial cosine search, score the top-K again with
+  a cross-encoder or a second LLM call. Often a real quality bump.
+- Hybrid search. Combine BM25 (keyword) scores with cosine (semantic)
+  scores. Useful when exact terms matter — names, code identifiers, error
+  messages.
+- Auto-title threads. When a thread is created, send the first message
+  to the LLM and ask for a 3–5 word title. Store it on the thread.
+- PDF / DOCX support. `app.upload_files` currently reads bytes as UTF-8.
+  Add `pypdf` or `python-docx` and decode in the endpoint.
+
+**More involved**
+- Make the agent loop LLM-driven. Replace the hardcoded `decide()` with a
+  call to the LLM that picks the next action, then loop until it says
+  "done". Turns the one-shot pipeline into a real multi-step agent.
+- A reflection step. After the LLM answers, ask "are you confident?".
+  If not, retrieve more and try again.
+- Swap the storage backend. `store.py` is plain functions over SQLite;
+  swap the implementation for Postgres, DuckDB, or a JSON file store.
+- Build a new tool. Anything with a `(state, store, cfg) -> result`
+  signature is a tool: calendar lookup, code execution, email draft,
+  file search across the filesystem. Register it and the agent can use it.
